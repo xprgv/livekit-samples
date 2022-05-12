@@ -41,7 +41,7 @@ func main() {
 	}
 
 	if err := room.LocalParticipant.PublishData([]byte("test data"), livekit.DataPacket_RELIABLE, []string{}); err != nil {
-		log.Fatal("Failed to publish data")
+
 	}
 
 	trackPublication, err := room.LocalParticipant.PublishTrack(track, &lksdk.TrackPublicationOptions{
