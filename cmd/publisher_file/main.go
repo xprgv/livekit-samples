@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	mediaFile = "./media/output.h264"
+	mediaFile = "./media/files/output.h264"
 
 	cfgPath = "./cmd/publisher_file/config.toml"
 )
