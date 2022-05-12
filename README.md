@@ -1,4 +1,4 @@
-# Livekit-test
+# Livekit-samples
 
-Playing with livekit webrtc media server
+Playing with livekit webrtc sfu
 
