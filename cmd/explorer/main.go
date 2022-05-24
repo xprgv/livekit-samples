@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"livekit-samples/internal/config"
 	"log"
 	"os"
@@ -34,43 +33,61 @@ func main() {
 		log.Fatal(err)
 	}
 
-	pc := room.LocalParticipant.GetSubscriberPeerConnection()
-	pc.OnTrack(func(tr *webrtc.TrackRemote, r *webrtc.RTPReceiver) {
-		codec := tr.Codec()
-		log.Println("track codec:", codec.MimeType)
-		switch codec.MimeType {
-		case webrtc.MimeTypeH264:
-			go func() {
-				for {
-					rtpH264Packet, _, err := tr.ReadRTP()
-					if err != nil {
-						if err == io.EOF {
-							log.Println(err)
-							break
-						}
-						log.Println(err)
-						continue
-					}
-					log.Println("rtp h264 packet: ", rtpH264Packet.Timestamp)
-				}
-			}()
-		case webrtc.MimeTypeVP8:
-			go func() {
-				for {
-					rtpOpusPacket, _, err := tr.ReadRTP()
-					if err != nil {
-						if err == io.EOF {
-							log.Println(err)
-							break
-						}
-						log.Println(err)
-						continue
-					}
-					log.Println("rtp packet", rtpOpusPacket.Timestamp)
-				}
-			}()
+	lksdk.NewSignalClient()
+
+	pcPublisher := room.LocalParticipant.GetPublisherPeerConnection()
+	pcPublisher.OnICECandidate(func(i *webrtc.ICECandidate) {
+		if i == nil {
+			return
 		}
+		fmt.Printf("publisher candidate: %+v\n", i)
 	})
+
+	pcSubscriber := room.LocalParticipant.GetSubscriberPeerConnection()
+	pcSubscriber.OnICECandidate(func(i *webrtc.ICECandidate) {
+		if i == nil {
+			return
+		}
+		fmt.Printf("subscriber candidate: %+v\n", i)
+	})
+
+	// pc := room.LocalParticipant.GetSubscriberPeerConnection()
+	// pc.OnTrack(func(tr *webrtc.TrackRemote, r *webrtc.RTPReceiver) {
+	// 	codec := tr.Codec()
+	// 	log.Println("track codec:", codec.MimeType)
+	// 	switch codec.MimeType {
+	// 	case webrtc.MimeTypeH264:
+	// 		go func() {
+	// 			for {
+	// 				rtpH264Packet, _, err := tr.ReadRTP()
+	// 				if err != nil {
+	// 					if err == io.EOF {
+	// 						log.Println(err)
+	// 						break
+	// 					}
+	// 					log.Println(err)
+	// 					continue
+	// 				}
+	// 				log.Println("rtp h264 packet: ", rtpH264Packet.Timestamp)
+	// 			}
+	// 		}()
+	// 	case webrtc.MimeTypeVP8:
+	// 		go func() {
+	// 			for {
+	// 				rtpOpusPacket, _, err := tr.ReadRTP()
+	// 				if err != nil {
+	// 					if err == io.EOF {
+	// 						log.Println(err)
+	// 						break
+	// 					}
+	// 					log.Println(err)
+	// 					continue
+	// 				}
+	// 				log.Println("rtp packet", rtpOpusPacket.Timestamp)
+	// 			}
+	// 		}()
+	// 	}
+	// })
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT)

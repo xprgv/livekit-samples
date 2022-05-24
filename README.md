@@ -1,9 +1,6 @@
 # Livekit-samples
 
-Playing with livekit webrtc sfu
-
-## Starting livekit server in docker
-
+Start livekit sfu in docker
 ```bash
 docker run --rm -p 7880:7880 \
     -p 7881:7881 \

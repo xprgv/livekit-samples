@@ -26,13 +26,17 @@ var (
 const (
 	H264_FRAME_DURATION = time.Millisecond * 33
 
-	FFMPEG_CMD = "ffmpeg -rtbufsize 100M -i ./media/files/big_buck_bunny.mp4 -pix_fmt yuv420p -c:v libx264 -bsf:v h264_mp4toannexb -b:v 2M -max_delay 0 -bf 0 -f h264 -"
+	FFMPEG_CMD = "ffmpeg -rtbufsize 100M -i ../../media/files/big_buck_bunny.mp4 -pix_fmt yuv420p -c:v libx264 -bsf:v h264_mp4toannexb -b:v 2M -max_delay 0 -bf 0 -f h264 -"
 )
 
 func main() {
-	config, err := config.GetConfig(cfgPath)
-	if err != nil {
-		log.Fatal(err)
+	config := config.Config{
+		Host:      "ws://localhost:7880",
+		ApiKey:    "APInAy27RUmYUnV",
+		ApiSecret: "90jQt67cwele8a6uIuIQLK0ZJ0cJKXnzz6iEI8h43dO",
+		Identity:  "publisher-from-file",
+		RoomName:  "stark-tower",
+		Token:     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2ODc4MjIyNjMsImlzcyI6IkFQSW5BeTI3UlVtWVVuViIsImp0aSI6InRvbnlfc3RhcmsiLCJuYW1lIjoiVG9ueSBTdGFyayIsIm5iZiI6MTY1MTgyMjI2Mywic3ViIjoidG9ueV9zdGFyayIsInZpZGVvIjp7InJvb20iOiJzdGFyay10b3dlciIsInJvb21Kb2luIjp0cnVlfX0.XCuS0Rw73JI8vE6dBUD3WbYGFNz1zGzdUBaDmnuI9Aw",
 	}
 
 	fmt.Println("connecting to room")
@@ -64,7 +68,22 @@ func main() {
 	}
 	fmt.Println(trackPublication.Name())
 
+	subscriberPeerConnection := room.LocalParticipant.GetSubscriberPeerConnection()
+	subscriberPeerConnection.OnICECandidate(func(i *webrtc.ICECandidate) {
+		if i == nil {
+			return
+		}
+		fmt.Println("ICE candidate subscriber:", i.String())
+	})
+
 	peerConnectionPublisher := room.LocalParticipant.GetPublisherPeerConnection()
+	peerConnectionPublisher.OnICECandidate(func(i *webrtc.ICECandidate) {
+		if i == nil {
+			return
+		}
+		fmt.Println("ICE candidate publisher ", i.String())
+	})
+
 	rtpSender, err := peerConnectionPublisher.AddTrack(track)
 	go func() {
 		buf := make([]byte, 1500)
@@ -106,6 +125,9 @@ func main() {
 				}
 				log.Fatal(err)
 			}
+
+			// fmt.Println(nal.UnitType.String())
+
 			nal.Data = append([]byte{0x00, 0x00, 0x00, 0x01}, nal.Data...)
 
 			if nal.UnitType == h264reader.NalUnitTypeSPS || nal.UnitType == h264reader.NalUnitTypePPS {
