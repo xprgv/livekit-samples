@@ -6,5 +6,5 @@ rtc:
 keys:
     APInAy27RUmYUnV: 90jQt67cwele8a6uIuIQLK0ZJ0cJKXnzz6iEI8h43dO
 logging:
-    json: false
+    json: true
     level: info
