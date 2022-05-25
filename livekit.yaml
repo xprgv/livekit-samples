@@ -8,3 +8,8 @@ keys:
 logging:
     json: true
     level: info
+room:
+    enabled_codecs:
+        - mime: audio/opus
+        - mime: video/vp8
+        - mime: video/h264

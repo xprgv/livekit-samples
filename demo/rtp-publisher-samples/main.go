@@ -13,16 +13,11 @@ import (
 
 	"github.com/livekit/protocol/livekit"
 	lksdk "github.com/livekit/server-sdk-go"
+	"github.com/livekit/server-sdk-go/pkg/samplebuilder"
 	"github.com/pion/rtp"
 	"github.com/pion/rtp/codecs"
 	"github.com/pion/webrtc/v3"
-
-	"github.com/jech/samplebuilder"
-	galenesamplebuilder "github.com/jech/samplebuilder"
-)
-
-const (
-	H264_FRAME_DURATION = time.Millisecond * 33
+	// "github.com/pion/webrtc/v3/pkg/media/samplebuilder"
 )
 
 func main() {
@@ -47,27 +42,62 @@ func main() {
 		log.Fatal(err)
 	}
 
-	videoTrackSample, err := webrtc.NewTrackLocalStaticSample(webrtc.RTPCodecCapability{
-		MimeType: webrtc.MimeTypeH264,
-		// ClockRate: 48000,
-	}, "video", "test_video_id")
+	go func() {
+		time.Sleep(5 * time.Second)
+		for _, participant := range room.GetParticipants() {
+			for _, track := range participant.Tracks() {
+				fmt.Printf("%+v\n", track)
+			}
+		}
+	}()
+
+	room.Callback.OnTrackSubscribed = onTrackSubscribed
+
+	// videoTrackSample, err := webrtc.NewTrackLocalStaticSample(webrtc.RTPCodecCapability{
+	// 	MimeType:  webrtc.MimeTypeH264,
+	// 	ClockRate: 90000,
+	// }, "video", "test_video_id")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	videoTrackSample, err := lksdk.NewLocalSampleTrack(webrtc.RTPCodecCapability{
+		MimeType:  webrtc.MimeTypeH264,
+		ClockRate: 90000,
+		// Channels:  1,
+	})
 	if err != nil {
 		log.Fatal(err)
+	} else {
+		fmt.Println(videoTrackSample.Codec())
 	}
 
-	audioTrackSample, err := webrtc.NewTrackLocalStaticSample(webrtc.RTPCodecCapability{
-		MimeType:    webrtc.MimeTypeOpus,
-		ClockRate:   48000,
-		Channels:    2,
-		SDPFmtpLine: "flt",
-	}, "audio", "test_audio_id")
+	// audioTrackSample, err := webrtc.NewTrackLocalStaticSample(webrtc.RTPCodecCapability{
+	// 	MimeType:    webrtc.MimeTypeOpus,
+	// 	ClockRate:   48000,
+	// 	Channels:    2,
+	// 	SDPFmtpLine: "flt",
+	// }, "audio", "test_audio_id")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	audioTrackSample, err := lksdk.NewLocalSampleTrack(webrtc.RTPCodecCapability{
+		MimeType:  webrtc.MimeTypeOpus,
+		ClockRate: 48000,
+		// Channels:  2,
+	})
 	if err != nil {
 		log.Fatal(err)
+	} else {
+		fmt.Println(audioTrackSample.Codec())
 	}
 
 	if _, err := room.LocalParticipant.PublishTrack(videoTrackSample, &lksdk.TrackPublicationOptions{
-		Name:   "video_test",
-		Source: livekit.TrackSource_CAMERA,
+		Name:        "video_test",
+		Source:      livekit.TrackSource_CAMERA,
+		VideoWidth:  480,
+		VideoHeight: 360,
 	}); err != nil {
 		log.Fatal(err)
 	}
@@ -86,9 +116,8 @@ func main() {
 		}
 		defer listener.Close()
 
-		h264SampleBuilder := samplebuilder.New(0, &codecs.H264Packet{}, 48000)
+		h264SampleBuilder := samplebuilder.New(0, &codecs.H264Packet{}, videoTrackSample.Codec().ClockRate)
 		buf := make([]byte, 1500)
-
 		for {
 			n, _, err := listener.ReadFromUDP(buf)
 			if err != nil {
@@ -103,13 +132,13 @@ func main() {
 			case 96: // h264 media
 				h264SampleBuilder.Push(&rtpPacket)
 				for sample := h264SampleBuilder.Pop(); sample != nil; sample = h264SampleBuilder.Pop() {
-					if err := videoTrackSample.WriteSample(*sample); err != nil && err != io.ErrClosedPipe {
+					// h264SampleBuilder.PopWithTimestamp()
+					if err := videoTrackSample.WriteSample(*sample, nil); err != nil && err != io.ErrClosedPipe {
 						log.Fatal(err)
 					} else {
 						fmt.Println("Write video sample")
 					}
 				}
-			default:
 			}
 		}
 	}()
@@ -121,8 +150,8 @@ func main() {
 		}
 		defer listener.Close()
 
-		// opusSampleBuilder := samplebuilder.New(100, &codecs.OpusPacket{}, 48000)
-		opusSampleBuilder := galenesamplebuilder.New(5, &codecs.OpusPacket{}, 48000)
+		opusSampleBuilder := samplebuilder.New(0, &codecs.OpusPacket{}, audioTrackSample.Codec().ClockRate)
+		// opusSampleBuilder := galenesamplebuilder.New(200, &codecs.OpusPacket{}, audioTrackSample.Codec().ClockRate)
 		buf := make([]byte, 1500)
 
 		for {
@@ -139,13 +168,12 @@ func main() {
 			case 97: // opus media
 				opusSampleBuilder.Push(&rtpPacket)
 				for sample := opusSampleBuilder.Pop(); sample != nil; sample = opusSampleBuilder.Pop() {
-					if err := audioTrackSample.WriteSample(*sample); err != nil && err != io.ErrClosedPipe {
+					if err := audioTrackSample.WriteSample(*sample, nil); err != nil && err != io.ErrClosedPipe {
 						log.Fatal(err)
 					} else {
 						// fmt.Println("Write audio sample")
 					}
 				}
-			default:
 			}
 		}
 	}()
@@ -157,4 +185,8 @@ func main() {
 
 	fmt.Println("disconnecting from room")
 	room.Disconnect()
+}
+
+func onTrackSubscribed(track *webrtc.TrackRemote, publication *lksdk.RemoteTrackPublication, rp *lksdk.RemoteParticipant) {
+	fmt.Println("on track subscribed")
 }

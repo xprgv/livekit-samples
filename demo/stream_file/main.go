@@ -19,10 +19,6 @@ import (
 	"github.com/pion/webrtc/v3/pkg/media/h264reader"
 )
 
-var (
-	cfgPath = "./config.toml"
-)
-
 const (
 	H264_FRAME_DURATION = time.Millisecond * 33
 
@@ -50,7 +46,21 @@ func main() {
 		log.Fatal(err)
 	}
 
-	track, err := webrtc.NewTrackLocalStaticSample(webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeH264}, "video", "test_id")
+	go func() {
+		time.Sleep(5 * time.Second)
+		for _, participant := range room.GetParticipants() {
+			for _, track := range participant.Tracks() {
+				fmt.Printf("%+v\n", track)
+			}
+		}
+	}()
+
+	// track, err := webrtc.NewTrackLocalStaticSample(webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeH264}, "video", "test_id")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	track, err := lksdk.NewLocalSampleTrack(webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeH264})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -141,7 +151,7 @@ func main() {
 			if err := track.WriteSample(media.Sample{
 				Data:     nal.Data,
 				Duration: time.Second,
-			}); err != nil {
+			}, nil); err != nil {
 				log.Fatal(err)
 			}
 		}

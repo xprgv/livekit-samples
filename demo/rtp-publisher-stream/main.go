@@ -73,7 +73,7 @@ func main() {
 	}
 
 	go func() {
-		listener, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 20362})
+		listener, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 20360})
 		if err != nil {
 			log.Fatal(err)
 		}

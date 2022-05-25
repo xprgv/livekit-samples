@@ -10,3 +10,6 @@ docker run --rm -p 7880:7880 \
     --config /livekit.yaml \
     --node-ip 0.0.0.0
 ```
+
+## Problems
+- rtp packets with sequence number >~ 34000 are not handled correctly by livekit sfu

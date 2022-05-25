@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	lksdk "github.com/livekit/server-sdk-go"
 	"github.com/pion/webrtc/v3"
@@ -41,6 +42,15 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	go func() {
+		time.Sleep(5 * time.Second)
+		for _, participant := range room.GetParticipants() {
+			for _, track := range participant.Tracks() {
+				fmt.Printf("%+v\n", track)
+			}
+		}
+	}()
 
 	publisherPeerConnection := room.LocalParticipant.GetPublisherPeerConnection()
 	publisherPeerConnection.OnICECandidate(func(i *webrtc.ICECandidate) {
