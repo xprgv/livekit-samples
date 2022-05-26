@@ -70,6 +70,10 @@ func main() {
 		log.Fatal(err)
 	} else {
 		fmt.Println(videoTrackSample.Codec())
+
+		videoTrackSample.OnBind(func() {
+			fmt.Println("Video track on bind")
+		})
 	}
 
 	// audioTrackSample, err := webrtc.NewTrackLocalStaticSample(webrtc.RTPCodecCapability{
@@ -91,6 +95,10 @@ func main() {
 		log.Fatal(err)
 	} else {
 		fmt.Println(audioTrackSample.Codec())
+
+		audioTrackSample.OnBind(func() {
+			fmt.Println("Audio track on bind")
+		})
 	}
 
 	if _, err := room.LocalParticipant.PublishTrack(videoTrackSample, &lksdk.TrackPublicationOptions{
@@ -110,33 +118,48 @@ func main() {
 	}
 
 	go func() {
-		listener, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 20360})
+		listener, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 20364})
 		if err != nil {
 			log.Fatal(err)
 		}
 		defer listener.Close()
 
-		h264SampleBuilder := samplebuilder.New(0, &codecs.H264Packet{}, videoTrackSample.Codec().ClockRate)
+		targetAddr := &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 5500}
+		outputSocket, err := net.ListenUDP("udp", nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		h264SampleBuilder := samplebuilder.New(200, &codecs.H264Packet{}, videoTrackSample.Codec().ClockRate)
 		buf := make([]byte, 1500)
 		for {
 			n, _, err := listener.ReadFromUDP(buf)
 			if err != nil {
 				log.Fatal(err)
 			}
+
 			rtpPacket := rtp.Packet{}
 			if err := rtpPacket.Unmarshal(buf[:n]); err != nil {
 				log.Fatal(err)
 			}
 
+			// fmt.Printf("%+v\n", rtpPacket)
+
+			if _, err := outputSocket.WriteToUDP(buf[:n], targetAddr); err != nil {
+				log.Fatal(err)
+			}
+
 			switch rtpPacket.PayloadType {
 			case 96: // h264 media
+
 				h264SampleBuilder.Push(&rtpPacket)
+
 				for sample := h264SampleBuilder.Pop(); sample != nil; sample = h264SampleBuilder.Pop() {
-					// h264SampleBuilder.PopWithTimestamp()
+
 					if err := videoTrackSample.WriteSample(*sample, nil); err != nil && err != io.ErrClosedPipe {
 						log.Fatal(err)
 					} else {
-						fmt.Println("Write video sample")
+						// fmt.Println("Write video sample")
 					}
 				}
 			}
@@ -163,6 +186,7 @@ func main() {
 			if err := rtpPacket.Unmarshal(buf[:n]); err != nil {
 				log.Fatal(err)
 			}
+			// fmt.Printf("%+v\n", rtpPacket)
 
 			switch rtpPacket.PayloadType {
 			case 97: // opus media
