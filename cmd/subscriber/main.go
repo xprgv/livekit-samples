@@ -91,73 +91,83 @@ func main() {
 		codec := tr.Codec()
 		fmt.Println("New track:", codec.MimeType)
 
-		// go func() {
-		// 	for {
-		// 		pack, _, err := r.ReadRTCP()
-		// 		if err != nil {
-		// 			log.Fatal(err)
-		// 		}
-		// 		fmt.Println(pack)
-		// 	}
-		// }()
+		switch codec.MimeType {
+		case webrtc.MimeTypeH264:
+			go func() {
+				for {
+					packet, _, err := tr.ReadRTP()
+					if err != nil {
+						log.Fatal(err)
+					}
+					fmt.Printf("%+v\n", packet)
 
-		// go func() {
-		// 	for {
-		// 		pack, _, err := tr.ReadRTP()
-		// 		if err != nil {
-		// 			if err == io.EOF {
-		// 				return
-		// 			} else {
-		// 				log.Fatal(err)
-		// 			}
+				}
+			}()
+		case webrtc.MimeTypeOpus:
+			// go func() {
+			// 	for {
+			// 		packet, _, err := tr.ReadRTP()
+			// 		if err != nil {
+			// 			log.Fatal(err)
+			// 		}
+			// 		fmt.Printf("%+v\n", packet)
 
-		// 		}
-		// 		fmt.Println(pack.PayloadType)
-		// 	}
-		// }()
+			// 	}
+			// }()
+		case webrtc.MimeTypeVP8:
+			go func() {
+				for {
+					packet, _, err := tr.ReadRTP()
+					if err != nil {
+						log.Fatal(err)
+					}
+					fmt.Printf("%+v\n", packet)
+				}
+			}()
+			// outputAddr := net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 5510}
+			// sock, err := net.ListenUDP("udp", nil)
+			// if err != nil {
+			// 	log.Fatal(err)
+			// }
+			// go func() {
+			// 	buf := make([]byte, 1500)
+			// 	for {
+			// 		n, _, err := tr.Read(buf)
+			// 		if err != nil {
+			// 			log.Fatal(err)
+			// 		}
 
-		// switch codec.MimeType {
-		// case webrtc.MimeTypeH264:
-		// 	addr := net.UDPAddr{
-		// 		IP:   net.ParseIP("238.0.0.1"),
-		// 		Port: 8000,
-		// 	}
-		// 	conn, err := net.ListenUDP("udp", nil)
-		// 	if err != nil {
-		// 		log.Fatal(err)
-		// 	}
+			// 		if _, err := sock.WriteToUDP(buf[:n], &outputAddr); err != nil {
+			// 			log.Fatal(err)
+			// 		}
+			// 	}
+			// }()
+			// targetAddr := net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 5500}
+			// socket, err := net.ListenUDP("udp", nil)
+			// if err != nil {
+			// 	log.Fatal(err)
+			// }
+			// go func() {
+			// 	buf := make([]byte, )
+			// 	for {
+			// 		// packet, _, err := tr.ReadRTP()
+			// 		// if err != nil {
+			// 		// 	log.Fatal(err)
+			// 		// }
+			// 		// fmt.Printf("%+v\n", packet)
 
-		// 	go func() {
-		// 		for {
-		// 			// buf := make([]byte, 1500)
-		// 			pack, _, err := tr.ReadRTP()
-		// 			// n, _, err := tr.Read(buf)
-		// 			if err != nil {
-		// 				if err == io.EOF {
-		// 					fmt.Println(err)
-		// 					return
-		// 				}
-		// 				fmt.Println(err)
-		// 				continue
-		// 			}
-		// 			// fmt.Println("get packet")
+			// 		tr.Read
+			// 	}
+			// }()
+		}
 
-		// 			bin, err := pack.Marshal()
-		// 			if err != nil {
-		// 				fmt.Println("failed to marshal packet", err)
-		// 			} else {
-		// 				if _, err := conn.WriteToUDP(bin, &addr); err != nil {
-		// 					fmt.Println(err)
-		// 				}
-		// 			}
-		// 			// fmt.Println("have rtp packet", pack.CSRC)
-
-		// 			// if _, err := conn.WriteToUDP(buf[:n], &addr); err != nil {
-		// 			// 	fmt.Println(err)
-		// 			// }
-		// 		}
-		// 	}()
-		// }
+		go func() {
+			for {
+				if _, _, err := r.ReadRTCP(); err != nil {
+					log.Fatal(err)
+				}
+			}
+		}()
 	})
 
 	sigChan := make(chan os.Signal, 1)

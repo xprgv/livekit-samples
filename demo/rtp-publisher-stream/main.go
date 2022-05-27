@@ -38,19 +38,17 @@ func main() {
 	}
 
 	h264Track1080p, err := webrtc.NewTrackLocalStaticRTP(webrtc.RTPCodecCapability{
-		MimeType: webrtc.MimeTypeH264,
-		// ClockRate: 90000,
-		// Channels:  2,
+		MimeType:  webrtc.MimeTypeH264,
+		ClockRate: 90000,
 	}, "video", "h264_high_res_video")
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	opusTrack, err := webrtc.NewTrackLocalStaticRTP(webrtc.RTPCodecCapability{
-		MimeType: webrtc.MimeTypeOpus,
-		// ClockRate: 48000,
-		// Channels:  2,
-		// SDPFmtpLine: "flt",
+		MimeType:  webrtc.MimeTypeOpus,
+		ClockRate: 48000,
+		Channels:  2,
 	}, "audio", "audio")
 	if err != nil {
 		log.Fatal(err)
@@ -90,13 +88,13 @@ func main() {
 			if err := packet.Unmarshal(buf[:n]); err != nil {
 				log.Fatal(err)
 			} else {
-				fmt.Println(
-					"payload_type:", packet.PayloadType,
-					"sequence_number:", packet.SequenceNumber,
-					"ssrc:", packet.SSRC,
-					"csrc:", packet.CSRC,
-					"timestamp:", packet.Timestamp,
-				)
+				// fmt.Println(
+				// 	"payload_type:", packet.PayloadType,
+				// 	"sequence_number:", packet.SequenceNumber,
+				// 	"ssrc:", packet.SSRC,
+				// 	"csrc:", packet.CSRC,
+				// 	"timestamp:", packet.Timestamp,
+				// )
 				if err := h264Track1080p.WriteRTP(&packet); err != nil {
 					log.Fatal(err)
 				}
@@ -125,13 +123,13 @@ func main() {
 			if err := packet.Unmarshal(buf[:n]); err != nil {
 				log.Fatal(err)
 			} else {
-				fmt.Println(
-					"payload_type:", packet.PayloadType,
-					"sequence_number:", packet.SequenceNumber,
-					"ssrc:", packet.SSRC,
-					"csrc:", packet.CSRC,
-					"timestamp:", packet.Timestamp,
-				)
+				// fmt.Println(
+				// 	"payload_type:", packet.PayloadType,
+				// 	"sequence_number:", packet.SequenceNumber,
+				// 	"ssrc:", packet.SSRC,
+				// 	"csrc:", packet.CSRC,
+				// 	"timestamp:", packet.Timestamp,
+				// )
 				if err := opusTrack.WriteRTP(&packet); err != nil {
 					log.Fatal(err)
 				}
