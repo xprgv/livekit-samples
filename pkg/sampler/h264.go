@@ -34,12 +34,14 @@ func NewRtpH264StreamSampleProvider() (*RtpH264StreamSampleProvider, error) {
 
 	go func() {
 		buf := make([]byte, 1500)
+		rtpPacket := rtp.Packet{}
+
 		for {
 			n, _, err := p.conn.ReadFromUDP(buf)
 			if err != nil {
 				log.Fatal(err)
 			}
-			rtpPacket := rtp.Packet{}
+
 			if err := rtpPacket.Unmarshal(buf[:n]); err != nil {
 				log.Fatal(err)
 			}

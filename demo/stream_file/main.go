@@ -55,11 +55,6 @@ func main() {
 		}
 	}()
 
-	// track, err := webrtc.NewTrackLocalStaticSample(webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeH264}, "video", "test_id")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
 	track, err := lksdk.NewLocalSampleTrack(webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeH264})
 	if err != nil {
 		log.Fatal(err)
@@ -136,7 +131,7 @@ func main() {
 				log.Fatal(err)
 			}
 
-			// fmt.Println(nal.UnitType.String())
+			fmt.Println(nal.UnitType.String())
 
 			nal.Data = append([]byte{0x00, 0x00, 0x00, 0x01}, nal.Data...)
 
