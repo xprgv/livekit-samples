@@ -7,7 +7,7 @@ keys:
     APInAy27RUmYUnV: 90jQt67cwele8a6uIuIQLK0ZJ0cJKXnzz6iEI8h43dO
 logging:
     json: true
-    level: info
+    level: debug
 room:
     enabled_codecs:
         - mime: audio/opus

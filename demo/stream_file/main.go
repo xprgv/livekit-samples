@@ -5,6 +5,7 @@ import (
 	"io"
 	"livekit-samples/internal/config"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -17,6 +18,8 @@ import (
 	"github.com/pion/webrtc/v3"
 	"github.com/pion/webrtc/v3/pkg/media"
 	"github.com/pion/webrtc/v3/pkg/media/h264reader"
+
+	_ "net/http/pprof"
 )
 
 const (
@@ -26,6 +29,9 @@ const (
 )
 
 func main() {
+
+	go http.ListenAndServe("127.0.0.1:8080", nil)
+
 	config := config.Config{
 		Host:      "ws://localhost:7880",
 		ApiKey:    "APInAy27RUmYUnV",
@@ -131,7 +137,7 @@ func main() {
 				log.Fatal(err)
 			}
 
-			fmt.Println(nal.UnitType.String())
+			// fmt.Println(nal.UnitType.String())
 
 			nal.Data = append([]byte{0x00, 0x00, 0x00, 0x01}, nal.Data...)
 
