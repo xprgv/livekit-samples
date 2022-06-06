@@ -3,21 +3,24 @@ package main
 import (
 	"fmt"
 	"io"
+
 	"log"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"livekit-samples/pkg/codecs"
+	"livekit-samples/pkg/lksdksamplebuilder"
+
 	"github.com/livekit/protocol/livekit"
 	lksdk "github.com/livekit/server-sdk-go"
 	"github.com/pion/rtp"
-	"github.com/pion/rtp/codecs"
 	"github.com/pion/webrtc/v3"
 
-	lksdksamplebuilder "github.com/livekit/server-sdk-go/pkg/samplebuilder"
+	// lksdksamplebuilder "github.com/livekit/server-sdk-go/pkg/samplebuilder"
 	// pionsamplebuilder "github.com/pion/webrtc/v3/pkg/media/samplebuilder"
-	// jechsamplebuilder "github.com/jech/samplebuilder"
+	jechsamplebuilder "github.com/jech/samplebuilder"
 	// _ "net/http/pprof"
 )
 
@@ -54,8 +57,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// go startOpus(room)
-	go startH264(room)
+	go startOpus(room)
+	// go startH264(room)
+	go startVP8(room)
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT)
@@ -125,10 +129,10 @@ func startH264(room *lksdk.Room) {
 		Channels:  0,
 		// SDPFmtpLine: "125, level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f",
 		SDPFmtpLine: "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42001f",
-		RTCPFeedback: []webrtc.RTCPFeedback{
-			{Type: webrtc.TypeRTCPFBNACK},
-			{Type: webrtc.TypeRTCPFBNACK, Parameter: "pli"},
-		},
+		// RTCPFeedback: []webrtc.RTCPFeedback{
+		// 	{Type: webrtc.TypeRTCPFBNACK},
+		// 	{Type: webrtc.TypeRTCPFBNACK, Parameter: "pli"},
+		// },
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -147,25 +151,26 @@ func startH264(room *lksdk.Room) {
 		log.Fatal(err)
 	}
 
-	listener, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 20364})
+	listener, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 5500})
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer listener.Close()
 
+	// depacketizer := &codecs.H264Packet{}
 	depacketizer := &codecs.H264Packet{}
-	h264SampleBuffer := lksdksamplebuilder.New(
-		100,
-		depacketizer,
-		videoTrackH264Sample.Codec().ClockRate,
-		lksdksamplebuilder.WithPacketDroppedHandler(func() {
-			fmt.Println("h264 packet drop")
-		}),
-	)
+
+	h264SampleBuffer := jechsamplebuilder.New(500, depacketizer, videoTrackH264Sample.Codec().ClockRate)
+
+	// go func() {
+	// 	timer := time.NewTicker(10 * time.Millisecond)
+
+	// }()
+
+	buf := make([]byte, 1500)
 
 	for {
-		buf := make([]byte, 1500)
-		rtpPacket := &rtp.Packet{}
+		rtpPacket := rtp.Packet{}
 
 		// n, _, err := listener.ReadFromUDP(buf)
 		n, _, err := listener.ReadFrom(buf)
@@ -176,33 +181,90 @@ func startH264(room *lksdk.Room) {
 			log.Fatal(err)
 		}
 
-		// fmt.Println("push")
-		h264SampleBuffer.Push(rtpPacket)
-		// fmt.Println(rtpPacket.SequenceNumber, depacketizer.IsPartitionHead(rtpPacket.Payload))
-		// fmt.Println()
+		// fmt.Println(len(rtpPacket.Payload))
 
-		for {
-			sample, _ := h264SampleBuffer.ForcePopWithTimestamp()
-			if sample == nil {
-				// fmt.Println("break")
-				break
-			}
-			// fmt.Println(sample., sample.Duration)
-			// fmt.Println("pop sample")
-			// fmt.Println(sample.PrevDroppedPackets)
-			if err := videoTrackH264Sample.WriteSample(*sample, nil); err != nil {
-				log.Fatal(err)
-			}
-
-		}
-
-		// switch rtpPacket.PayloadType {
-		// case 96: // h264 media
-
-		// default:
-		// 	fmt.Println("Another packet")
+		// if len(rtpPacket.Payload) <= 2 {
+		// 	continue
 		// }
+
+		switch rtpPacket.PayloadType {
+		case 96: // h264 media
+			h264SampleBuffer.Push(rtpPacket.Clone())
+
+			for {
+				sample, ts := h264SampleBuffer.PopWithTimestamp()
+				if sample == nil {
+					// fmt.Println("nil sample")
+					break
+				}
+				sample.PacketTimestamp = ts
+
+				if err := videoTrackH264Sample.WriteSample(*sample, nil); err != nil {
+					log.Fatal(err)
+				}
+			}
+		default:
+			fmt.Println("Another packet")
+		}
 	}
 
 	// select {}
+}
+
+func startVP8(room *lksdk.Room) {
+	videoTrackVP8Sample, err := lksdk.NewLocalSampleTrack(webrtc.RTPCodecCapability{
+		MimeType:  webrtc.MimeTypeVP8,
+		ClockRate: 90000,
+	})
+	if err != nil {
+		log.Fatal(err)
+	} else {
+		fmt.Println(videoTrackVP8Sample.Codec())
+	}
+
+	if publication, err := room.LocalParticipant.PublishTrack(videoTrackVP8Sample, &lksdk.TrackPublicationOptions{
+		Name:   "video_vp8_test",
+		Source: livekit.TrackSource_CAMERA,
+	}); err != nil {
+		log.Fatal(err)
+	} else {
+		fmt.Println(publication.MimeType())
+	}
+
+	go func() {
+		listener, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 5500})
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer listener.Close()
+
+		vp8SampleBuilder := lksdksamplebuilder.New(100, &codecs.VP8Packet{}, videoTrackVP8Sample.Codec().ClockRate)
+		buf := make([]byte, 1500)
+		rtpPacket := rtp.Packet{}
+
+		for {
+			n, _, err := listener.ReadFromUDP(buf)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			if err := rtpPacket.Unmarshal(buf[:n]); err != nil {
+				log.Fatal(err)
+			}
+			// fmt.Printf("%+v\n", rtpPacket)
+
+			vp8SampleBuilder.Push(rtpPacket.Clone())
+
+			for {
+				sample := vp8SampleBuilder.Pop()
+				if sample == nil {
+					break
+				}
+
+				if err := videoTrackVP8Sample.WriteSample(*sample, nil); err != nil && err != io.ErrClosedPipe {
+					log.Fatal(err)
+				}
+			}
+		}
+	}()
 }
