@@ -37,19 +37,22 @@ func main() {
 		log.Fatal(err)
 	}
 
+	go startH264(room)
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT)
+
+	<-sigChan
+
+	fmt.Println("disconnecting from room")
+	room.Disconnect()
+}
+
+func startH264(room *lksdk.Room) {
 	h264Track1080p, err := webrtc.NewTrackLocalStaticRTP(webrtc.RTPCodecCapability{
 		MimeType:  webrtc.MimeTypeH264,
 		ClockRate: 90000,
 	}, "video", "h264_high_res_video")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	opusTrack, err := webrtc.NewTrackLocalStaticRTP(webrtc.RTPCodecCapability{
-		MimeType:  webrtc.MimeTypeOpus,
-		ClockRate: 48000,
-		Channels:  2,
-	}, "audio", "audio")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -63,15 +66,8 @@ func main() {
 		fmt.Println(publication.Name(), publication.IsSubscribed())
 	}
 
-	if _, err := room.LocalParticipant.PublishTrack(opusTrack, &lksdk.TrackPublicationOptions{
-		Name:   "audio",
-		Source: livekit.TrackSource_MICROPHONE,
-	}); err != nil {
-		log.Fatal(err)
-	}
-
 	go func() {
-		listener, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 20360})
+		listener, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 5500})
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -88,14 +84,8 @@ func main() {
 			if err := packet.Unmarshal(buf[:n]); err != nil {
 				log.Fatal(err)
 			} else {
-				// fmt.Println(
-				// 	"payload_type:", packet.PayloadType,
-				// 	"sequence_number:", packet.SequenceNumber,
-				// 	"ssrc:", packet.SSRC,
-				// 	"csrc:", packet.CSRC,
-				// 	"timestamp:", packet.Timestamp,
-				// )
-				if err := h264Track1080p.WriteRTP(&packet); err != nil {
+				fmt.Println(packet.SequenceNumber)
+				if err := h264Track1080p.WriteRTP(packet.Clone()); err != nil {
 					log.Fatal(err)
 				}
 			}
@@ -105,46 +95,57 @@ func main() {
 			// }
 		}
 	}()
+}
 
-	go func() {
-		listener, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 21360})
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer listener.Close()
+func startOpus(room *lksdk.Room) {
+	// opusTrack, err := webrtc.NewTrackLocalStaticRTP(webrtc.RTPCodecCapability{
+	// 	MimeType:  webrtc.MimeTypeOpus,
+	// 	ClockRate: 48000,
+	// 	Channels:  2,
+	// }, "audio", "audio")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
-		buf := make([]byte, 1500)
-		for {
-			n, _, err := listener.ReadFromUDP(buf)
-			if err != nil {
-				log.Fatal(err)
-			}
-			packet := rtp.Packet{}
-			if err := packet.Unmarshal(buf[:n]); err != nil {
-				log.Fatal(err)
-			} else {
-				// fmt.Println(
-				// 	"payload_type:", packet.PayloadType,
-				// 	"sequence_number:", packet.SequenceNumber,
-				// 	"ssrc:", packet.SSRC,
-				// 	"csrc:", packet.CSRC,
-				// 	"timestamp:", packet.Timestamp,
-				// )
-				if err := opusTrack.WriteRTP(&packet); err != nil {
-					log.Fatal(err)
-				}
-			}
-			// if _, err := opusTrack.Write(buf[:n]); err != nil {
-			// 	log.Fatal(err)
-			// }
-		}
-	}()
+	// if _, err := room.LocalParticipant.PublishTrack(opusTrack, &lksdk.TrackPublicationOptions{
+	// 	Name:   "audio",
+	// 	Source: livekit.TrackSource_MICROPHONE,
+	// }); err != nil {
+	// 	log.Fatal(err)
+	// }
 
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT)
+	// go func() {
+	// 	listener, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 21360})
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// 	defer listener.Close()
 
-	<-sigChan
+	// 	buf := make([]byte, 1500)
+	// 	for {
+	// 		n, _, err := listener.ReadFromUDP(buf)
+	// 		if err != nil {
+	// 			log.Fatal(err)
+	// 		}
+	// 		packet := rtp.Packet{}
+	// 		if err := packet.Unmarshal(buf[:n]); err != nil {
+	// 			log.Fatal(err)
+	// 		} else {
+	// 			// fmt.Println(
+	// 			// 	"payload_type:", packet.PayloadType,
+	// 			// 	"sequence_number:", packet.SequenceNumber,
+	// 			// 	"ssrc:", packet.SSRC,
+	// 			// 	"csrc:", packet.CSRC,
+	// 			// 	"timestamp:", packet.Timestamp,
+	// 			// )
+	// 			if err := opusTrack.WriteRTP(&packet); err != nil {
+	// 				log.Fatal(err)
+	// 			}
+	// 		}
+	// 		// if _, err := opusTrack.Write(buf[:n]); err != nil {
+	// 		// 	log.Fatal(err)
+	// 		// }
+	// 	}
+	// }()
 
-	fmt.Println("disconnecting from room")
-	room.Disconnect()
 }

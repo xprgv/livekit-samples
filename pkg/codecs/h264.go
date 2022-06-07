@@ -222,9 +222,11 @@ func (p *H264Packet) Unmarshal(payload []byte) ([]byte, error) {
 	naluType := payload[0] & naluTypeBitmask
 	switch {
 	case naluType > 0 && naluType < 24:
+		fmt.Println("naluType > 0 && naluType < 24")
 		return p.doPackaging(payload), nil
 
 	case naluType == stapaNALUType:
+		fmt.Println("naluType == stapaNALUType")
 		currOffset := int(stapaHeaderSize)
 		result := []byte{}
 		for currOffset < len(payload) {
@@ -241,6 +243,7 @@ func (p *H264Packet) Unmarshal(payload []byte) ([]byte, error) {
 		return result, nil
 
 	case naluType == fuaNALUType:
+		fmt.Println("naluType == fuaNALUType")
 		if len(payload) < fuaHeaderSize {
 			return nil, errShortPacket
 		}

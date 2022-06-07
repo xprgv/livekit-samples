@@ -33,7 +33,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	lksdk.NewSignalClient()
+	// signalClient := lksdk.NewSignalClient()
+	// signalClient.
 
 	pcPublisher := room.LocalParticipant.GetPublisherPeerConnection()
 	pcPublisher.OnICECandidate(func(i *webrtc.ICECandidate) {
