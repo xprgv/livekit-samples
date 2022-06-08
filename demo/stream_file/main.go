@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"livekit-samples/internal/config"
 	"log"
 	"net/http"
 	"os"
@@ -29,25 +28,17 @@ const (
 )
 
 func main() {
-
 	go http.ListenAndServe("127.0.0.1:8080", nil)
 
-	config := config.Config{
-		Host:      "ws://localhost:7880",
-		ApiKey:    "APInAy27RUmYUnV",
-		ApiSecret: "90jQt67cwele8a6uIuIQLK0ZJ0cJKXnzz6iEI8h43dO",
-		Identity:  "publisher-from-file",
-		RoomName:  "stark-tower",
-		Token:     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2ODc4MjIyNjMsImlzcyI6IkFQSW5BeTI3UlVtWVVuViIsImp0aSI6InRvbnlfc3RhcmsiLCJuYW1lIjoiVG9ueSBTdGFyayIsIm5iZiI6MTY1MTgyMjI2Mywic3ViIjoidG9ueV9zdGFyayIsInZpZGVvIjp7InJvb20iOiJzdGFyay10b3dlciIsInJvb21Kb2luIjp0cnVlfX0.XCuS0Rw73JI8vE6dBUD3WbYGFNz1zGzdUBaDmnuI9Aw",
-	}
-
 	fmt.Println("connecting to room")
-	room, err := lksdk.ConnectToRoom(config.Host, lksdk.ConnectInfo{
-		APIKey:              config.ApiKey,
-		APISecret:           config.ApiSecret,
-		RoomName:            config.RoomName,
-		ParticipantIdentity: config.Identity,
-	})
+	room, err := lksdk.ConnectToRoom(
+		"ws://localhost:7880", lksdk.ConnectInfo{
+			APIKey:              "APInAy27RUmYUnV",
+			APISecret:           "90jQt67cwele8a6uIuIQLK0ZJ0cJKXnzz6iEI8h43dO",
+			RoomName:            "stark-tower",
+			ParticipantIdentity: "publisher-from-file",
+			ParticipantName:     "publisher-from-file",
+		})
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"livekit-samples/internal/config"
 	"log"
 	"net"
 	"os"
@@ -16,27 +15,19 @@ import (
 )
 
 func main() {
-	config := config.Config{
-		Host:      "ws://localhost:7880",
-		ApiKey:    "APInAy27RUmYUnV",
-		ApiSecret: "90jQt67cwele8a6uIuIQLK0ZJ0cJKXnzz6iEI8h43dO",
-		Identity:  "publisher-rtp-stream",
-		RoomName:  "stark-tower",
-		Token:     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2ODc4MjIyNjMsImlzcyI6IkFQSW5BeTI3UlVtWVVuViIsImp0aSI6InRvbnlfc3RhcmsiLCJuYW1lIjoiVG9ueSBTdGFyayIsIm5iZiI6MTY1MTgyMjI2Mywic3ViIjoidG9ueV9zdGFyayIsInZpZGVvIjp7InJvb20iOiJzdGFyay10b3dlciIsInJvb21Kb2luIjp0cnVlfX0.XCuS0Rw73JI8vE6dBUD3WbYGFNz1zGzdUBaDmnuI9Aw",
-	}
-
-	fmt.Println("connecting to room")
-	room, err := lksdk.ConnectToRoom(config.Host, lksdk.ConnectInfo{
-		APIKey:              config.ApiKey,
-		APISecret:           config.ApiSecret,
-		RoomName:            config.RoomName,
-		ParticipantIdentity: config.Identity,
-		ParticipantName:     "rtp-stream-publisher",
-	})
+	room, err := lksdk.ConnectToRoom(
+		"ws://localhost:7880", lksdk.ConnectInfo{
+			APIKey:              "APInAy27RUmYUnV",
+			APISecret:           "90jQt67cwele8a6uIuIQLK0ZJ0cJKXnzz6iEI8h43dO",
+			RoomName:            "stark-tower",
+			ParticipantIdentity: "publisher-rtp-stream",
+			ParticipantName:     "rtp-stream-publisher",
+		})
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	go startOpus(room)
 	go startH264(room)
 
 	sigChan := make(chan os.Signal, 1)
@@ -67,85 +58,83 @@ func startH264(room *lksdk.Room) {
 	}
 
 	go func() {
-		listener, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 5500})
+		listener, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 20362})
 		if err != nil {
 			log.Fatal(err)
 		}
 		defer listener.Close()
 
 		buf := make([]byte, 1500)
+		rtpPacket := rtp.Packet{}
 		for {
 			n, _, err := listener.ReadFromUDP(buf)
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			packet := rtp.Packet{}
-			if err := packet.Unmarshal(buf[:n]); err != nil {
+			if err := rtpPacket.Unmarshal(buf[:n]); err != nil {
 				log.Fatal(err)
-			} else {
-				fmt.Println(packet.SequenceNumber)
-				if err := h264Track1080p.WriteRTP(packet.Clone()); err != nil {
-					log.Fatal(err)
-				}
 			}
 
-			// if _, err := h264Track1080p.Write(buf[:n]); err != nil {
-			// 	log.Fatal(err)
-			// }
+			switch rtpPacket.PayloadType {
+			case 96:
+				// fmt.Println(packet.SequenceNumber)
+				if err := h264Track1080p.WriteRTP(rtpPacket.Clone()); err != nil {
+					log.Fatal(err)
+				}
+			default:
+				// log in debug mode packet with another type
+				log.Println("Another payload type in h264 rtp stream")
+				// log.Printf("%+v\n", rtpPacket)
+			}
 		}
 	}()
 }
 
 func startOpus(room *lksdk.Room) {
-	// opusTrack, err := webrtc.NewTrackLocalStaticRTP(webrtc.RTPCodecCapability{
-	// 	MimeType:  webrtc.MimeTypeOpus,
-	// 	ClockRate: 48000,
-	// 	Channels:  2,
-	// }, "audio", "audio")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	opusTrack, err := webrtc.NewTrackLocalStaticRTP(webrtc.RTPCodecCapability{
+		MimeType:  webrtc.MimeTypeOpus,
+		ClockRate: 48000,
+		Channels:  2,
+	}, "audio", "audio")
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// if _, err := room.LocalParticipant.PublishTrack(opusTrack, &lksdk.TrackPublicationOptions{
-	// 	Name:   "audio",
-	// 	Source: livekit.TrackSource_MICROPHONE,
-	// }); err != nil {
-	// 	log.Fatal(err)
-	// }
+	if _, err := room.LocalParticipant.PublishTrack(opusTrack, &lksdk.TrackPublicationOptions{
+		Name:   "audio",
+		Source: livekit.TrackSource_MICROPHONE,
+	}); err != nil {
+		log.Fatal(err)
+	}
 
-	// go func() {
-	// 	listener, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 21360})
-	// 	if err != nil {
-	// 		log.Fatal(err)
-	// 	}
-	// 	defer listener.Close()
+	go func() {
+		listener, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 21360})
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer listener.Close()
 
-	// 	buf := make([]byte, 1500)
-	// 	for {
-	// 		n, _, err := listener.ReadFromUDP(buf)
-	// 		if err != nil {
-	// 			log.Fatal(err)
-	// 		}
-	// 		packet := rtp.Packet{}
-	// 		if err := packet.Unmarshal(buf[:n]); err != nil {
-	// 			log.Fatal(err)
-	// 		} else {
-	// 			// fmt.Println(
-	// 			// 	"payload_type:", packet.PayloadType,
-	// 			// 	"sequence_number:", packet.SequenceNumber,
-	// 			// 	"ssrc:", packet.SSRC,
-	// 			// 	"csrc:", packet.CSRC,
-	// 			// 	"timestamp:", packet.Timestamp,
-	// 			// )
-	// 			if err := opusTrack.WriteRTP(&packet); err != nil {
-	// 				log.Fatal(err)
-	// 			}
-	// 		}
-	// 		// if _, err := opusTrack.Write(buf[:n]); err != nil {
-	// 		// 	log.Fatal(err)
-	// 		// }
-	// 	}
-	// }()
+		buf := make([]byte, 1500)
+		rtpPacket := rtp.Packet{}
+		for {
+			n, _, err := listener.ReadFromUDP(buf)
+			if err != nil {
+				log.Fatal(err)
+			}
 
+			if err := rtpPacket.Unmarshal(buf[:n]); err != nil {
+				log.Fatal(err)
+			}
+
+			switch rtpPacket.PayloadType {
+			case 97:
+				if err := opusTrack.WriteRTP(rtpPacket.Clone()); err != nil {
+					log.Fatal(err)
+				}
+			default:
+				log.Println("another payload type in opus rtp stream")
+			}
+		}
+	}()
 }

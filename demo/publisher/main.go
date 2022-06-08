@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"livekit-samples/internal/config"
 	"log"
 	"net"
 	"os"
@@ -19,22 +18,18 @@ var (
 )
 
 func main() {
-	config, err := config.GetConfig(cfgPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	fmt.Println("connecting to room")
-	room, err := lksdk.ConnectToRoom(config.Host, lksdk.ConnectInfo{
-		APIKey:              config.ApiKey,
-		APISecret:           config.ApiSecret,
-		RoomName:            config.RoomName,
-		ParticipantIdentity: config.Identity,
-	})
+	room, err := lksdk.ConnectToRoom(
+		"ws://localhost:7880", lksdk.ConnectInfo{
+			APIKey:              "APInAy27RUmYUnV",
+			APISecret:           "90jQt67cwele8a6uIuIQLK0ZJ0cJKXnzz6iEI8h43dO",
+			RoomName:            "stark-tower",
+			ParticipantIdentity: "publisher",
+			ParticipantName:     "publisher",
+		})
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	track, err := webrtc.NewTrackLocalStaticRTP(webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeH264}, "video", "test_id")
 	if err != nil {
 		log.Fatal(err)
