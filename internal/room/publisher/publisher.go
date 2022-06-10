@@ -1,9 +1,21 @@
 package publisher
 
-type Config struct{}
+import (
+	lksdk "github.com/livekit/server-sdk-go"
+)
 
-type WebrtcLivekitPublisher struct{}
+type Config struct {
+}
+
+type WebrtcLivekitPublisher struct {
+	room *lksdk.Room
+}
 
 func New(config Config) *WebrtcLivekitPublisher {
 	return &WebrtcLivekitPublisher{}
+}
+
+func (p *WebrtcLivekitPublisher) ConnectToRoom() error {
+
+	return nil
 }

@@ -14,6 +14,10 @@ import (
 	"github.com/pion/webrtc/v3"
 )
 
+const (
+	TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2ODc4MjIyNjMsImlzcyI6IkFQSW5BeTI3UlVtWVVuViIsImp0aSI6InRvbnlfc3RhcmsiLCJuYW1lIjoiVG9ueSBTdGFyayIsIm5iZiI6MTY1MTgyMjI2Mywic3ViIjoidG9ueV9zdGFyayIsInZpZGVvIjp7InJvb20iOiJzdGFyay10b3dlciIsInJvb21Kb2luIjp0cnVlfX0.XCuS0Rw73JI8vE6dBUD3WbYGFNz1zGzdUBaDmnuI9Aw"
+)
+
 func main() {
 	room, err := lksdk.ConnectToRoom(
 		"ws://localhost:7880", lksdk.ConnectInfo{
@@ -58,7 +62,7 @@ func startH264(room *lksdk.Room) {
 	}
 
 	go func() {
-		listener, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 20362})
+		listener, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 20360})
 		if err != nil {
 			log.Fatal(err)
 		}
